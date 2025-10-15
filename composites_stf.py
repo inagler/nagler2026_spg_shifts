@@ -26,16 +26,16 @@ mask = pop_tools.region_mask_3d(grid_name, region_defs=region_defs, mask_name='N
 mask = mask.sum('region').roll(nlon=-100)   
 
 if period == 'ghg_hist':
-    ds_temp = xr.open_dataset(path + 'Below_combined_TEMP_3.0_40_20.nc').where(mask == 1)
-    ds_salt = xr.open_dataset(path + 'Below_combined_SALT_3.0_40_20.nc').where(mask == 1)
+    #ds_temp = xr.open_dataset(path + 'Below_combined_TEMP_3.0_40_20.nc').where(mask == 1)
+    #ds_salt = xr.open_dataset(path + 'Below_combined_SALT_3.0_40_20.nc').where(mask == 1)
     ds_vvel = xr.open_dataset(path + 'Below_combined_VVEL_3.0_40_20.nc').where(mask == 1)
 elif period == 'aa_hist':
-    ds_temp = xr.open_dataset(path + 'Below_combined_TEMP_2.0_40_20_aa_hist.nc').where(mask == 1)
-    ds_salt = xr.open_dataset(path + 'Below_combined_SALT_2.0_40_20_aa_hist.nc').where(mask == 1)
+    #ds_temp = xr.open_dataset(path + 'Below_combined_TEMP_2.0_40_20_aa_hist.nc').where(mask == 1)
+    #ds_salt = xr.open_dataset(path + 'Below_combined_SALT_2.0_40_20_aa_hist.nc').where(mask == 1)
     ds_vvel = xr.open_dataset(path + 'Below_combined_VVEL_2.0_40_20_aa_hist.nc').where(mask == 1)
 elif period == 'above':
-    ds_temp = xr.open_dataset(path + 'Above_combined_TEMP_3.0_40_20.nc').where(mask == 1)
-    ds_salt = xr.open_dataset(path + 'Above_combined_SALT_3.0_40_20.nc').where(mask == 1)
+    #ds_temp = xr.open_dataset(path + 'Above_combined_TEMP_3.0_40_20.nc').where(mask == 1)
+    #ds_salt = xr.open_dataset(path + 'Above_combined_SALT_3.0_40_20.nc').where(mask == 1)
     ds_vvel = xr.open_dataset(path + 'Above_combined_VVEL_3.0_40_20.nc').where(mask == 1)
     
 # for deprecated dz and DXU    

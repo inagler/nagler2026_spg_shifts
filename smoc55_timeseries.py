@@ -20,6 +20,8 @@ import gsw
 
 start_time = time.time()
 
+'''
+
 # compute density bins
 numbers = np.array([29.70, 31.50, 33.15, 34.75, 35.80, 36.38, 36.70, 36.89, 37.06, 37.13, 37.30])
 intervals = np.diff(numbers) / 4
@@ -211,7 +213,19 @@ for member_id in ensemble_members:
 files = 'smoc55_member_*.nc'
 ensemble_mean = xr.open_mfdataset(output_dir+files, concat_dim='new_dim', combine='nested').mean(dim='new_dim')
 ensemble_mean.to_netcdf(os.path.join(output_dir, f'smoc55_ensemble_mean.nc'))
-print('ensmble mean saved')
+print('ensemble mean saved')
+
+'''
+# messy now because i keep adding to this code - can be cleaner
+output_dir = '/Data/skd/scratch/innag3580/comp/smoc/'
+files = [f for f in os.listdir(output_dir) if f.endswith('.nc') and f != 'smoc55_ensemble_mean.nc']
+datasets = [xr.open_dataarray(os.path.join(output_dir, f)) for f in files]
+######################
+
+stacked = xr.concat(datasets, dim='member')
+std = stacked.std(dim='member')
+std.to_netcdf(os.path.join(output_dir, f'smoc55_ensemble_std.nc'))
+print('ensemble std saved')
 
 end_time = time.time()
 duration = end_time - start_time
