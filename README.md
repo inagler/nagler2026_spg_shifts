@@ -1,5 +1,7 @@
 # Multidecadal North Atlantic Circulation Shifts under Historical Anthropogenic Forcing in CESM2-LE
 
+[![DOI](https://zenodo.org/badge/953027123.svg)](https://doi.org/10.5281/zenodo.19979604)
+
 This repository contains the analysis code for the manuscript:
 
 > **"Multidecadal North Atlantic Circulation Shifts under Historical Anthropogenic Forcing in CESM2-LE"**
