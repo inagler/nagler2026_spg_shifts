@@ -3,7 +3,7 @@
 This repository contains the analysis code for the manuscript:
 
 > **"Multidecadal North Atlantic Circulation Shifts under Historical Anthropogenic Forcing in CESM2-LE"**
-> Ina Nagler, Helene Asbjørnsen, Andreas Born. *Ocean Science* (2026). [ADD DOI]
+> Ina Nagler, Helene Asbjørnsen, Andreas Born.
 
 The code prepares CESM2 large ensemble data, performs change point and composite analyses, and produces all figures in the manuscript.
 
@@ -50,16 +50,15 @@ The code prepares CESM2 large ensemble data, performs change point and composite
 ---
 
 ## Workflow
-
-1. **Prepare** — Run `Prepare_*.ipynb` notebooks to preprocess CESM2 output
-2. **Analyse** — Submit HPC jobs via `run_*.sh` scripts to detect change points and compute composites
+1. **Prepare** — Run `smoc55_timeseries.py` to extract the SMOC55 index time series
+2. **Analyse** — Submit `run_change_point.sh` and `run_composite.sh` to detect change points and compute composites
 3. **Plot** — Run `Plot_*.ipynb` notebooks to reproduce all manuscript figures
 
 ---
 
 ## Data
 
-This code uses output from the [CESM2 Large Ensemble](https://www.cesm.ucar.edu/community-projects/lens2) (100 members). The raw model data is not included in this repository due to its size. Pre-processed intermediate files required to run the plotting notebooks are available at [ADD ZENODO DOI].
+This code uses output from the [CESM2 Large Ensemble](https://www.cesm.ucar.edu/community-projects/lens2) (100 members). The raw model data is publicly available through the CESM2-LE project. Users should download the required fields and run the full workflow from step 1.
 
 ---
 
@@ -78,13 +77,3 @@ conda install -c conda-forge numpy pandas xarray dask matplotlib cartopy gsw cft
 ## License
 
 This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## Citation
-
-If you use this code, please cite:
-
-> Nagler, I., Asbjørnsen, H., and Born, A. (2026). *Multidecadal North Atlantic Circulation Shifts under Historical Anthropogenic Forcing in CESM2-LE*. Ocean Science. [ADD DOI]
-
-Code repository: [ADD ZENODO DOI]
