@@ -1,0 +1,4 @@
+.ipynb_checkpoints/
+*.png
+smoc55_error_log.txt
+*.npy

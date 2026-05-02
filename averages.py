@@ -43,7 +43,7 @@ def main():
 
     # Base directory containing the variable folders
     base_dir = '/Data/gfi/share/ModData/CESM2_LENS2/ocean/monthly'
-    output_dir = '/Data/skd/scratch/innag3580/comp'
+    output_dir = '/Data/skd/scratch/innag3580/comp/averages'
 
     var_dir = os.path.join(base_dir, var)
     file_paths = sorted(glob.glob(os.path.join(var_dir, '*.nc')))
