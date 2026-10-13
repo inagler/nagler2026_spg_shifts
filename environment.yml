@@ -1,0 +1,19 @@
+name: nagler2026_spg_shifts
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas
+  - xarray
+  - dask
+  - matplotlib
+  - cartopy
+  - gsw
+  - cftime
+  - pop_tools
+  - cmocean
+  - cmcrameri
+  - psutil
+  - jupyter
