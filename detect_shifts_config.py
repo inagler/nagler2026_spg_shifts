@@ -28,7 +28,7 @@ D = L_POST  # = 20
 # ---------------------------------------------------------------------------
 # Historical members are truncated to this year before detection.
 # piControl uses all available model years (no calendar truncation applied).
-END_YEAR = 2029
+END_YEAR = 2039
 
 # ---------------------------------------------------------------------------
 # Category boundaries (calendar years)
