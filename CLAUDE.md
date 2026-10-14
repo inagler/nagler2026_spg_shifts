@@ -1,101 +1,137 @@
 # CLAUDE.md
 
-## Project Overview
+## Project
 
-This repository contains the full analysis and plotting code for a scientific manuscript on **multidecadal North Atlantic circulation shifts under historical anthropogenic forcing**, using the CESM2 Large Ensemble (100 members, 1850–2100). The central variable is the **SMOC55 index** (density-weighted meridional overturning streamfunction at 55°N), a proxy for subpolar gyre circulation strength.
-
-The analysis decomposes circulation shifts into aerosol-forced (AA) and greenhouse gas-forced (GHG) drivers.
+Revision of **egusphere-2026-2588** — *Multidecadal North Atlantic circulation shifts, CESM2 Large Ensemble (100 members, 1850–2100)*. Central variable: **SMOC55** (density-weighted meridional overturning streamfunction at 55°N, subpolar gyre circulation proxy).
 
 ---
 
-## Repository Structure
+## Branch and tag rules
+
+- **Work only on branch `revision`.**
+- Never modify tag `v1.0-submitted` or branch `main`.
+- All revision outputs go to the revision output directory (see below). **Never overwrite existing outputs.**
+
+---
+
+## Repository structure
 
 ```
 publishable_code/
-├── Plot_*.ipynb                   # Visualization notebooks (produce manuscript figures)
-├── *.py                           # Data preparation and analysis scripts
-├── *.sh                           # SLURM job submission scripts (HPC)
-├── sensitivity_change_point/      # CSV outputs from change point parameter sweep
-├── environment.yml                # Conda environment specification
-└── *.pdf / *.png                  # Final publication figures
+├── Plot_*.ipynb                      # Visualization notebooks (manuscript figures)
+├── *.py                              # Data preparation and analysis scripts
+├── detect_shifts_config.py           # Revision: all detection parameters and paths
+├── detect_shifts.py                  # Revision: new shift detection script
+├── REVISION_PLAN.md                  # Revision analysis plan and method definition
+├── *.sh                              # SLURM job submission scripts (HPC)
+├── sensitivity_change_point/         # CSV outputs from change point parameter sweep
+├── environment.yml                   # Conda environment specification
+└── *.pdf / *.png                     # Final publication figures
 ```
 
 ---
 
-## Workflow
+## Data input and output paths
 
-The pipeline has three phases:
-
-### 1. Prepare (data extraction)
-- `smoc55_timeseries.py` — extracts annual SMOC55 index from raw CESM2 monthly output for all 100 ensemble members
-- `dens2.py` — computes sigma-2 density via TEOS-10 (requires `gsw`)
-- `ensemble_mean_temp_salt.py` — calculates ensemble mean temperature/salinity for detrending
-- `rename_vars.py` — utility for NetCDF variable renaming
-
-### 2. Analyse (change point detection & composites)
-- `change_point_analysis.py` — sliding window algorithm detecting abrupt shifts:
-  - Compares 40-year baseline statistics to a 20-year test window
-  - Identifies "Above" (strengthening) and "Below" (weakening) events
-  - Parameterised by threshold (1–4σ), window lengths, gap, and detrended/raw mode
-  - Outputs CSV files: `change_point_indices_<threshold>_<P1>_<P2>_<gap>[-detrended].csv`
-- `composite_analysis.py` / `parallel_composite_analysis.py` — compute 3D spatiotemporal composites (TEMP, SALT, MLD, SHF, streamfunctions) around detected shifts; parallelised with Dask for HPC
-- `composites_stf.py` — composite analysis specific to streamfunction variables
-- `averages.py` / `standard_deviations.py` — spatial/temporal means and ensemble spread
-
-Run analyses on the cluster via the SLURM scripts (`run_change_point.sh`, `run_composite.sh`).
-
-### 3. Plot (figure generation)
-All plotting is done in Jupyter notebooks. Each notebook reads composite netCDF files and CSV change point results, and outputs publication-ready PDFs at 300 DPI (Copernicus journal formatting).
-
-| Notebook | Output figure |
+### Raw model input (read-only, on cluster)
+| Data | Path |
 |---|---|
-| `Plot_increase.ipynb` | Strengthening event spatial patterns (flipbook + timeseries) |
-| `Plot_decrease_aa.ipynb` | Aerosol-forced weakening spatial patterns |
-| `Plot_decrease_ghg.ipynb` | GHG-forced weakening spatial patterns |
-| `Plot_depth_density_anomalies.ipynb` | Vertical density anomaly profiles (T vs. S decomposition) |
-| `Plot_map.ipynb` | Climatological density map with regional masks |
-| `Plot_occurences.ipynb` | Shift occurrence histogram and ensemble timeseries |
-| `Plot_smoc+dens_historical_trend.ipynb` | Historical trends in SMOC55 and density (1850–2030) |
-| `Plot_schematic.ipynb` | Conceptual schematic diagrams |
+| CESM2-LE VVEL (monthly) | `/Data/gfi/share/ModData/CESM2_LENS2/ocean/monthly/VVEL/` |
+| CESM2-LE TEMP (monthly) | `/Data/gfi/share/ModData/CESM2_LENS2/ocean/monthly/TEMP/` |
+| CESM2-LE SALT (monthly) | `/Data/gfi/share/ModData/CESM2_LENS2/ocean/monthly/SALT/` |
+| piControl VO (CMIP6)    | `/Data/gfi/share/ModData/CMIP6/raw/ocean/piControl/CESM2/VO/` |
+| piControl THETAO (CMIP6)| `/Data/gfi/share/ModData/CMIP6/raw/ocean/piControl/CESM2/THETAO/` |
+| piControl SO (CMIP6)    | `/Data/gfi/share/ModData/CMIP6/raw/ocean/piControl/CESM2/SO/` |
+
+### Derived inputs (written by existing pipeline scripts)
+| Data | Path |
+|---|---|
+| SMOC55 member timeseries | `/Data/skd/scratch/innag3580/comp/smoc/smoc55_member_*.nc` |
+| SMOC55 piControl timeseries | `/Data/skd/scratch/innag3580/comp/smoc55_picontrol/smoc55_picontrol.nc` |
+| Ensemble mean SMOC55 | `/Data/skd/scratch/innag3580/comp/smoc/smoc55_ensemble_mean.nc` |
+| Composite netCDF outputs | `/Data/skd/scratch/innag3580/comp/composites/` |
+
+### Existing v1.0 analysis outputs (never overwrite)
+| Data | Path |
+|---|---|
+| Change point CSVs (canonical) | `publishable_code/plotting-change_point_indices_*.csv` |
+| Change point CSVs (full sweep) | `publishable_code/sensitivity_change_point/` |
+
+### Revision output directory
+All outputs produced during the revision go to:
+```
+/Data/skd/scratch/innag3580/comp/revision/
+```
+Subdirectories are created per script (e.g., `shifts/`, `composites/`, `figures/`). **Do not write revision outputs to any other location.**
 
 ---
 
-## Key Data Paths (on cluster)
+## Conda environment and how to run scripts
 
-- **Raw CESM2 input:** `/Data/gfi/share/ModData/CESM2_LENS2/`
-- **Composite netCDF outputs:** `/Data/skd/scratch/innag3580/comp/`
-- **Change point CSVs:** `sensitivity_change_point/` (in repo) and repo root (`plotting-change_point_indices_*.csv`)
+Environment name: **`nagler2026_spg_shifts`** (Python 3.10, defined in `environment.yml`).
 
----
-
-## Environment
-
-Managed via conda. Install with:
 ```bash
-conda env create -f environment.yml
+# Activate
+conda activate nagler2026_spg_shifts
+
+# Run new detection script (revision)
+python detect_shifts.py
+
+# Run existing change point analysis (v1.0 pipeline, do not modify)
+python change_point_analysis.py 40 20 3.0 5 False
+
+# Run on HPC via SLURM
+sbatch run_change_point.sh
+sbatch run_composite.sh
+
+# Launch Jupyter for plotting notebooks
+jupyter notebook
 ```
 
-Key dependencies:
-- `xarray`, `dask` — array operations and out-of-core parallel processing
-- `pop_tools` — POP ocean model mesh operations
-- `gsw` — TEOS-10 seawater thermodynamics (sigma-2 density)
-- `matplotlib`, `cartopy` — plotting and geographic projections
-- `cmocean`, `cmcrameri` — scientific colormaps
+Key dependencies: `xarray`, `dask`, `pop_tools`, `gsw`, `matplotlib`, `cartopy`, `cmocean`, `cmcrameri`.
+
+Annual resampling uses `resample(time='1Y')` (not `'1YE'`); this is the correct alias for the xarray version in this environment.
 
 ---
 
-## Key Scientific Concepts
+## Known issues
 
-- **SMOC55**: Density-weighted MOC streamfunction at 55°N — the primary circulation index
-- **Sigma-2**: Potential density referenced to 2000 dbar (conservative water mass variable)
-- **Change point detection**: Sliding window comparison; a shift is flagged when a 20-year mean moves beyond the baseline variability by N standard deviations
-- **Composite analysis**: Ensemble-mean spatial/temporal anomaly fields averaged across members at detected shift events
-- **Forcing decomposition**: AA = aerosol-driven scenarios; GHG = greenhouse gas-driven scenarios
+1. **`CT_from_pt` called with `SALT` twice** in `Plot_smoc+dens_historical_trend.ipynb`: the correct call is `CT_from_pt(SA, pt)` but the notebook passes `SALT` as both arguments, producing incorrect conservative temperature and therefore incorrect sigma-2. Fix in the revision figure (RC item).
+
+2. **Inconsistent composite file naming**: composite NetCDF files use mixed naming conventions across scripts (e.g., `Below_combined_VVEL_2.0_40_20_aa_hist.nc` vs `Below_combined_VVEL_3.0_40_20.nc`). The threshold/window suffix scheme is not applied consistently for all category names.
+
+3. **sMOC block broken in `composites_stf.py`**: `ds_salt` and `ds_temp` are commented out (lines 30–34) but referenced at line 53 (`CT_from_pt(ds_salt['SALT'], ds_temp['TEMP'])`), causing a `NameError` at runtime for the `ghg_hist` and `aa_hist` branches.
+
+4. **Detection logic duplicated in three places**: the sliding-window exceedance logic appears in `change_point_analysis.py`, `parallel_composite_analysis.py`, and notebooks. The revision replaces this with the single authoritative detection function in `detect_shifts.py`.
+
+---
+
+## Shift detection method
+
+The revision detection method is defined precisely in **REVISION_PLAN.md Section 2**. Use the names defined there exactly:
+
+- Input series: **Ψ_s(mem, yr)** — annual mean SMOC55 maximum
+- Normalised shift magnitude: **η(mem, yr)**
+- Window lengths: **L_pre = 40**, **L_post = 20**
+- Minimum separation: **D = L_post = 20**
+- Thresholds: **k = 2** (weakening yr_s < 1985), **k = 3** (all other categories)
+- Categories: **strengthening**, **weakening_early** (yr_s < 1985), **weakening_late** (yr_s ≥ 1985)
+- Detection end year: **2029**
+
+See REVISION_PLAN.md for the full method, including clustering, separation rule, and piControl procedure.
+
+---
+
+## Workflow summary
+
+1. **Prepare**: `smoc55_timeseries.py`, `smoc55_picontrol.py`, `dens2.py`, `ensemble_mean_temp_salt.py`
+2. **Detect shifts (revision)**: `detect_shifts.py` (reads config from `detect_shifts_config.py`)
+3. **Composites**: `composite_analysis.py` / `parallel_composite_analysis.py` / `composites_stf.py` (existing; revision will add new composite scripts)
+4. **Plot**: `Plot_*.ipynb` notebooks
 
 ---
 
 ## Notes
 
-- The four CSV files prefixed `plotting-change_point_indices_*.csv` are the canonical set used for manuscript figures (filtered from the full sensitivity sweep of 45+ variants).
-- Notebooks previously named `Prepare_*.ipynb` have been removed from the repo; preparation is now handled by standalone Python scripts.
 - License: MIT (Copyright 2026 Ina Nagler)
+- The four `plotting-change_point_indices_*.csv` files are the v1.0 canonical set; they use a gap-based (not cluster-based) detection and serve as a comparison baseline for the revision.
