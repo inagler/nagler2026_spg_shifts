@@ -126,7 +126,8 @@ See REVISION_PLAN.md for the full method, including clustering, separation rule,
 
 1. **Prepare**: `smoc55_timeseries.py`, `smoc55_picontrol.py`, `dens2.py`, `ensemble_mean_temp_salt.py`
 2. **Detect shifts (revision)**: `detect_shifts.py` (reads config from `detect_shifts_config.py`)
-3. **Composites**: `composite_analysis.py` / `parallel_composite_analysis.py` / `composites_stf.py` (existing; revision will add new composite scripts)
+3. **Composites (revision)**: `compute_composites.py <VAR>` — reads `shifts_k2_hist.csv`, extracts 60-year DJFM windows, writes one NetCDF per category to `/Data/skd/scratch/innag3580/comp/revision/composites/raw/`. Per-window temp files are staged in `.../composites/tmp/` and deleted after final concatenation. Members `1231.002` and `1281.012` are excluded at both the CSV-filter and file-load level. Only files whose filename date-range start year is ≤ 2040 are opened.
+4. **Composites (v1.0)**: `composite_analysis.py` / `parallel_composite_analysis.py` / `composites_stf.py` (existing; do not modify)
 4. **Plot**: `Plot_*.ipynb` notebooks
 
 ---

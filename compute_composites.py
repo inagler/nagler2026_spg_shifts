@@ -40,7 +40,8 @@ import detect_shifts_config as cfg
 BASE_PATH       = '/Data/gfi/share/ModData/CESM2_LENS2/ocean/monthly'
 SHIFTS_FILE     = os.path.join(cfg.REVISION_OUTPUT_DIR, 'shifts_k2_hist.csv')
 OUTPUT_DIR      = '/Data/skd/scratch/innag3580/comp/revision/composites/raw'
-EXCLUDE_MEMBERS = {'1231.002', '1281.012'}
+TMP_DIR         = '/Data/skd/scratch/innag3580/comp/revision/composites/tmp'
+EXCLUDE_MEMBERS = {'1231.002', '1231.01', '1281.012'}
 
 WINDOW_PRE  = cfg.L_PRE    # 40
 WINDOW_POST = cfg.L_POST   # 20
@@ -107,9 +108,25 @@ def load_member_djfm(var, member_id, var_key):
     ds_djfm   : xr.Dataset with one DJFM-averaged value per calendar year
     start_year: int, calendar year of the first DJFM timestep (= first year of record)
     """
+    # Hard guard: excluded members must never be opened regardless of how this is called
+    if member_id in EXCLUDE_MEMBERS:
+        return None
+
     dir_name = 'AICE' if var == 'AICE' else var
     pattern  = os.path.join(BASE_PATH, dir_name, f'*LE2-{member_id}*.nc')
     paths    = sorted(glob.glob(pattern))
+
+    # Belt-and-suspenders: drop any path that contains an excluded member string
+    paths = [p for p in paths if not any(ex in p for ex in EXCLUDE_MEMBERS)]
+
+    # Drop files whose date range starts after 2040 (filename ends …YYYYMM-YYYYMM.nc)
+    def _file_start_year(path):
+        stem = os.path.basename(path).rsplit('.', 1)[0]  # strip .nc
+        date_part = stem.rsplit('-', 2)[-2]               # first YYYYMM token
+        return int(date_part[:4])
+
+    paths = [p for p in paths if _file_start_year(p) <= 2040]
+
     if not paths:
         raise FileNotFoundError(
             f'No files matched for member {member_id}, var {var}\n  pattern: {pattern}'
@@ -119,6 +136,7 @@ def load_member_djfm(var, member_id, var_key):
         paths,
         chunks={'time': 120},
         preprocess=make_preprocess(var_key),
+        drop_variables=['time_bound'],
     )
     ds[var_key] = ds[var_key].astype('float32')
 
@@ -200,8 +218,15 @@ def main():
 
     # --- Load and filter event list ---
     df = pd.read_csv(SHIFTS_FILE)
+    df['mem'] = df['mem'].astype(str).str.strip()
     n_before = len(df)
+    excluded = df[df['mem'].isin(EXCLUDE_MEMBERS)]
     df = df[~df['mem'].isin(EXCLUDE_MEMBERS)].copy()
+    print(f'CSV filter: {n_before} events → {len(df)} after excluding '
+          f'{sorted(EXCLUDE_MEMBERS)}')
+    for ex_mem in sorted(EXCLUDE_MEMBERS):
+        count = (excluded['mem'] == ex_mem).sum()
+        print(f'  {ex_mem}: {count} events removed')
 
     categories = build_categories(df)
 
@@ -233,6 +258,7 @@ def main():
     print()
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(TMP_DIR, exist_ok=True)
 
     # --- Process each category ---
     for cat_name, cat_df in categories.items():
@@ -249,8 +275,8 @@ def main():
         print(f'[{cat_name}] {len(cat_df)} events → {out_path}')
 
         member_cache = {}   # member_id → (ds_djfm, start_year)
-        windows      = []   # DataArray per valid event
-        labels       = []   # shift coordinate labels
+        tmp_files    = []   # paths of per-window temp NetCDF files
+        labels       = []   # shift coordinate labels (for reporting)
 
         for _, row in cat_df.iterrows():
             mem  = str(row['mem'])
@@ -262,7 +288,11 @@ def main():
             if mem not in member_cache:
                 print(f'    loading {mem} ...')
                 try:
-                    ds_djfm, start_year = load_member_djfm(var, mem, var_key)
+                    result = load_member_djfm(var, mem, var_key)
+                    if result is None:
+                        print(f'    WARNING: {mem} is in EXCLUDE_MEMBERS — skipping.')
+                        continue
+                    ds_djfm, start_year = result
                     member_cache[mem] = (ds_djfm, start_year)
                     print(f'    loaded: {len(ds_djfm.time)} DJFM years '
                           f'[{start_year} – {start_year + len(ds_djfm.time) - 1}]')
@@ -278,25 +308,32 @@ def main():
                 print(skip_msg)
                 continue
 
-            # Assign relative time coordinate and compute into memory
+            # Write window to a temp file (avoids stacking all windows in memory)
+            label    = f'{mem}_{yr_s}'
+            tmp_path = os.path.join(TMP_DIR, f'{cat_name}_{var}_{label}.nc')
             da = ds_win[var_key].assign_coords(time=REL_YEARS).compute()
-            windows.append(da)
-            labels.append(f'{mem}_{yr_s}')
+            da.expand_dims({'shift': [label]}).to_dataset(name=var_key).to_netcdf(tmp_path)
+            tmp_files.append(tmp_path)
+            labels.append(label)
 
-        if not windows:
+        if not tmp_files:
             print(f'  No valid windows for [{cat_name}] — nothing written.\n')
             for ds_djfm, _ in member_cache.values():
                 ds_djfm.close()
             member_cache.clear()
             continue
 
-        print(f'  Concatenating {len(windows)} events along "shift" dimension ...')
-        da_out = xr.concat(windows, dim=pd.Index(labels, name='shift'))
-        ds_out = da_out.to_dataset(name=var_key)
+        print(f'  Concatenating {len(tmp_files)} windows via open_mfdataset ...')
+        ds_cat = xr.open_mfdataset(tmp_files, concat_dim='shift', combine='nested')
 
         print(f'  Writing {out_path}')
-        print(f'  Output shape: {dict(zip(da_out.dims, da_out.shape))}')
-        ds_out.to_netcdf(out_path)
+        ds_cat.to_netcdf(out_path)
+        ds_cat.close()
+
+        # Delete temp files
+        for f in tmp_files:
+            os.remove(f)
+        tmp_files.clear()
         print(f'  Done: {cat_name}_{var}.nc\n')
 
         # Release memory before next category
