@@ -62,20 +62,28 @@ All outputs produced during the revision go to:
 ```
 /Data/skd/scratch/innag3580/comp/revision/
 ```
-Subdirectories are created per script (e.g., `shifts/`, `composites/`, `figures/`). **Do not write revision outputs to any other location.**
+Subdirectories are created per script (e.g., `shifts/`, `composites/`). **Do not write revision outputs to any other location.**
+
+**Exception — figures**: revision figures are saved to `revision/figures/` inside the repository (`~/phase1_CONDA/publishable_code/revision/figures/`, absolute: `/home/innag3580/phase1_CONDA/publishable_code/revision/figures/`), not on scratch. All plot scripts must use this path.
 
 ---
 
 ## Conda environment and how to run scripts
 
-Environment name: **`nagler2026_spg_shifts`** (Python 3.10, defined in `environment.yml`).
+**Revision scripts** use **`~/.conda/envs/movie/bin/python`** directly — this environment has `cartopy`, `gsw`, `xarray`, `pop_tools`, and `numpy`.
+
+**v1.0 pipeline scripts** use environment **`nagler2026_spg_shifts`** (Python 3.10, defined in `environment.yml`).
 
 ```bash
-# Activate
-conda activate nagler2026_spg_shifts
+# Run revision scripts (use movie env directly)
+~/.conda/envs/movie/bin/python detect_shifts.py
+~/.conda/envs/movie/bin/python compute_composites.py TEMP
+~/.conda/envs/movie/bin/python compute_bsf_composites.py
+~/.conda/envs/movie/bin/python plot_buoyancy_frequency.py
+~/.conda/envs/movie/bin/python test_metrics_one_window.py
 
-# Run new detection script (revision)
-python detect_shifts.py
+# Activate v1.0 pipeline environment
+conda activate nagler2026_spg_shifts
 
 # Run existing change point analysis (v1.0 pipeline, do not modify)
 python change_point_analysis.py 40 20 3.0 5 False
@@ -127,8 +135,9 @@ See REVISION_PLAN.md for the full method, including clustering, separation rule,
 1. **Prepare**: `smoc55_timeseries.py`, `smoc55_picontrol.py`, `dens2.py`, `ensemble_mean_temp_salt.py`
 2. **Detect shifts (revision)**: `detect_shifts.py` (reads config from `detect_shifts_config.py`)
 3. **Composites (revision)**: `compute_composites.py <VAR>` — reads `shifts_k2_hist.csv`, extracts 60-year DJFM windows, writes one NetCDF per category to `/Data/skd/scratch/innag3580/comp/revision/composites/raw/`. Per-window temp files are staged in `.../composites/tmp/` and deleted after final concatenation. Members `1231.002` and `1281.012` are excluded at both the CSV-filter and file-load level. Only files whose filename date-range start year is ≤ 2040 are opened.
-4. **Composites (v1.0)**: `composite_analysis.py` / `parallel_composite_analysis.py` / `composites_stf.py` (existing; do not modify)
-4. **Plot**: `Plot_*.ipynb` notebooks
+4. **BSF composites (revision)**: `compute_bsf_composites.py` — derives barotropic streamfunction composites from the VVEL composites produced in step 3. Reads `{category}_VVEL.nc`, computes BSF = (VVEL × dz × DXU).sum(z_t).cumsum(nlon) with roll(−100) correction, masks to TLAT 10–65°N, writes `{category}_BSF.nc` to the same raw composites directory. Both scripts use `sys.stdout.reconfigure(line_buffering=True)` and a startup banner.
+5. **Composites (v1.0)**: `composite_analysis.py` / `parallel_composite_analysis.py` / `composites_stf.py` (existing; do not modify)
+6. **Plot**: `Plot_*.ipynb` notebooks
 
 ---
 
